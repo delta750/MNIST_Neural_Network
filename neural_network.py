@@ -53,8 +53,8 @@ def load_data():
             for _ in fp:
                 tmp.append([1 if j == i else 0 for j in range(0, 10)])
     test_truth = np.array(tmp, dtype='int')
-    print "Train truth array size: ", train_truth.shape
-    print "Test truth array size: ", test_truth.shape
+    print("Train truth array size: ", train_truth.shape)
+    print("Test truth array size: ", test_truth.shape)
     return train_data, test_data, train_truth, test_truth
 
 X_train, X_test, y_train, y_test = load_data()
@@ -106,10 +106,61 @@ def activation_function(act_fun):
         return cosine, derivative_of_cosine
 
 
+class ML_NeuralNetwork:
+
+    def __init__(self, x_input_train, hidden_neurons, chosen_activation_function, lamda, number_of_iteration, t, eta, tolerance ):
+        self.X_train = np.hstack((np.ones((x_input_train.shape[0], 1)), x_input_train))
+        self.hidden_neurons = hidden_neurons
+        self.activation_function , self.derActivationFunc = activation_function(chosen_activation_function)
+        self.lamda = lamda
+        self.number_of_iteration = number_of_iteration
+        self.t = t
+        self.eta = eta
+        self.tolerance = tolerance
+        # T is Nb x K, T = outputs -> # of possible classes
+        self.number_of_outputs = t.shape[1]
+        # initialize random weights
+        # W1 is M x (D+1), M = hidden units
+        self.weights1 = np.random.randn(self.hidden_neurons,x_input_train.shape[1])
+        # W2 is K x D +1, M = hidden units, K = k categories
+        self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
 
 
+        def feedForward(self, x, t, weights1, weights2):
+
+            # We calculate first the dot product between weights1 and x and then we pass it as an arg in the chosen act_fun and its gradient func
+            firstLayerResult = self.activation_function(np.dot(x,weights1.T))
+
+            # Add bias
+            firstLayerResult = np.hstack((np.ones((firstLayerResult.shape[0], 1)), firstLayerResult))
+
+            # Y is the output
+            y = np.dot(firstLayerResult, weights2.T)
+            # softmaxResult is the probability
+            softmaxResult = softmax(y)
+            max_error = np.max(softmaxResult, axis=1)
+
+            # Loss function
+            Ew =  np.sum(t * y) - np.sum(max_error) - \
+                np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * y.shape[1]).T), 1))) - \
+                (0.5 * lamda) * np.sum(np.square(weights2))
+
+            # Gradient ascent calculation for W2, (T-Y).T*Z -λW2
+
+            grand2 = np.dot((t-y).T , firstLayerResult) -eta* weights2
+
+            # Gradient ascent calculation for W1
+            # TODO
+
+            return Ew, grand2
 
 
+        # Documentation
+
+       # np.ones Return a new array of given shape and type, filled with ones.
+       #x_input_train.shape[0] its the rows ---> n  https://stackoverflow.com/questions/10200268/what-does-shape-do-in-for-i-in-rangey-shape0
+       # X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
+       #input layer(  # features), the size of the hidden layer (variable parameter to be tuned), and the number of the output layer (# of possible classes)
 
 
 
