@@ -1,7 +1,9 @@
 from __future__ import division
+
+import inline as inline
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+#%matplotlib inline
 from PIL import Image
 
 
@@ -147,17 +149,17 @@ class ML_NeuralNetwork:
 
         # Gradient ascent calculation for W2, (T-Y).T*Z -λW2
 
-        grand2 = np.dot((t-y).T , firstLayerResult) -eta* weights2
+        gradw2 = np.dot((t-y).T , firstLayerResult) -eta* weights2
 
-        # Gradient ascent calculation for W1
-        # TODO
+        # Gradient ascent calculation for W1 (we get rid of the bias from w2)
+        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.grad_activation(x.dot(weights1.T)).T).dot(x)
 
-        return Ew, grand2
+        return Ew, gradw2, gradw1
 
     def neural_network_train(self):
         Ew_old = -np.inf
         for i in range(self.number_of_iteration):
-            error, gradWeight1, gradWeight2 = feedForward(self.X_train,self.t,self.weights1,self.weights2)
+            error, gradWeight1, gradWeight2 = self.feedForward(self.X_train,self.t,self.weights1,self.weights2)
             print("iteration #", i, "and error=", error)
 
             if np.absolute(error- Ew_old) < self.tolerance:
