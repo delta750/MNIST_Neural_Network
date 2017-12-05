@@ -120,12 +120,14 @@ class ML_NeuralNetwork:
         self.number_of_iteration = number_of_iteration
         self.t = t
         self.eta = eta
+        self.tempx = x_input_train.shape[1]
         self.tolerance = tolerance
         # T is Nb x K, T = outputs -> # of possible classes
         self.number_of_outputs = t.shape[1]
         # initialize random weights
         # W1 is M x (D+1), M = hidden units
-        self.weights1 = np.random.randn(self.hidden_neurons,x_input_train.shape[1]) * 0.2 - 0.1
+        print(self.tempx)
+        self.weights1 = np.random.rand(self.hidden_neurons,self.tempx) * 0.2 - 0.1
         # W2 is K x D +1, M = hidden units, K = k categories
         self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
 
