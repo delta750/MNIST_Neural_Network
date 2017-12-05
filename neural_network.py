@@ -1,10 +1,10 @@
 from __future__ import division
 
-import inline as inline
+
 import numpy as np
-import matplotlib.pyplot as plt
-#%matplotlib inline
-from PIL import Image
+
+
+
 
 
 def softmax(y):
@@ -70,7 +70,9 @@ def activation_function(act_fun):
 
     def logarithmic(a):
 
-        return np.log( 1 + np.exp(a))
+        #return np.log( 1 + np.exp(a))
+        m = np.maximum(0, a)
+        return m + np.log(np.exp(-m) + np.exp(a - m))
 
     def tahn(a):
 
@@ -110,10 +112,10 @@ def activation_function(act_fun):
 
 class ML_NeuralNetwork:
 
-    def __init__(self, x_input_train, hidden_neurons, chosen_activation_function, lamda, number_of_iteration, t, eta, tolerance ):
+    def __init__(self, x_input_train, hidden_neurons, hidden_layer_act_func, lamda, number_of_iteration, t, eta, tolerance ):
         self.X_train = np.hstack((np.ones((x_input_train.shape[0], 1)), x_input_train))
         self.hidden_neurons = hidden_neurons
-        self.activation_function , self.derActivationFunc = activation_function(chosen_activation_function)
+        self.activation_function , self.derActivationFunc = activation_function(hidden_layer_act_func)
         self.lamda = lamda
         self.number_of_iteration = number_of_iteration
         self.t = t
@@ -123,7 +125,7 @@ class ML_NeuralNetwork:
         self.number_of_outputs = t.shape[1]
         # initialize random weights
         # W1 is M x (D+1), M = hidden units
-        self.weights1 = np.random.randn(self.hidden_neurons,x_input_train.shape[1])
+        self.weights1 = np.random.randn(self.hidden_neurons,x_input_train.shape[1]) * 0.2 - 0.1
         # W2 is K x D +1, M = hidden units, K = k categories
         self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
 
@@ -147,12 +149,12 @@ class ML_NeuralNetwork:
             np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * y.shape[1]).T), 1))) - \
             (0.5 * lamda) * np.sum(np.square(weights2))
 
-        # Gradient ascent calculation for W2, (T-Y).T*Z -λW2
+
 
         gradw2 = np.dot((t-y).T , firstLayerResult) -eta* weights2
 
         # Gradient ascent calculation for W1 (we get rid of the bias from w2)
-        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.grad_activation(x.dot(weights1.T)).T).dot(x)
+        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.derActivationFunc(x.dot(weights1.T)).T).dot(x)
 
         return Ew, gradw2, gradw1
 
@@ -200,10 +202,10 @@ class ML_NeuralNetwork:
     def grad_check(self):
         epsilon = 1e-6
         _list = np.random.randint(self.X_train.shape[0], size=5)
-        x_sample = np.array(self.x[_list, :])
+        x_sample = np.array(self.X_train[_list, :])
         t_sample = np.array(self.t[_list, :])
 
-        Ew, gradWeight1, gradWeight2 = self.feedForward(x_sample,t_sample,self.weights1,self.weights2)
+        Ew, gradWeight2, gradWeight1 = self.feedForward(x_sample,t_sample,self.weights1,self.weights2)
 
         print("gradWeight1 shape: ", gradWeight1.shape)
         print("gradWeight2 shape: ", gradWeight2.shape)
@@ -261,7 +263,7 @@ if __name__ == '__main__':
    # Maximum number of iteration of gradient ascend
    number_of_iterations = 500
    tolerance = 1e-6
-   mlnn = ML_NeuralNetwork(x_data, act_func, hidden_units, lamda, number_of_iterations, train_truth_data, eta, tolerance)
+   mlnn = ML_NeuralNetwork(x_data, hidden_units, act_func, lamda, number_of_iterations, train_truth_data, eta, tolerance)
 
    mlnn.grad_check()
    mlnn.train()
