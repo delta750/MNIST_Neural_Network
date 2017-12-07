@@ -1,10 +1,6 @@
 from __future__ import division
 
-
 import numpy as np
-
-
-
 
 
 def softmax(y):
@@ -59,18 +55,17 @@ def load_data():
     print("Test truth array size: ", test_truth.shape)
     return train_data, test_data, train_truth, test_truth
 
+
 X_train, X_test, y_train, y_test = load_data()
 
 
-
 def activation_function(act_fun):
-
     def sigmoid(z):
         return 1 / (1 + np.exp(-z))
 
     def logarithmic(a):
 
-        #return np.log( 1 + np.exp(a))
+        # return np.log( 1 + np.exp(a))
         m = np.maximum(0, a)
         return m + np.log(np.exp(-m) + np.exp(a - m))
 
@@ -78,44 +73,42 @@ def activation_function(act_fun):
 
         return (np.exp(2 * a) - 1) / (np.exp(2 * a) + 1)
 
-
     def cosine(a):
 
         return np.cos(a)
 
-
-
     """
     Because later we will need to compute the derivative of the activation function,
     we compute it here
-    
+
     """
+
     def derivative_of_logarithmic(a):
         # if we take the derivative of logaritmic we end up with sigmoid
         return sigmoid(a)
 
     def derivative_of_tahn(a):
 
-        return 1- np.power(tahn(a),2)
+        return 1 - np.power(tahn(a), 2)
 
-    def  derivative_of_cosine(a):
+    def derivative_of_cosine(a):
         return -np.sin(a)
-
 
     if act_fun == 1:
         return logarithmic, derivative_of_logarithmic
     if act_fun == 2:
-        return  tahn, derivative_of_tahn
+        return tahn, derivative_of_tahn
     if act_fun == 3:
         return cosine, derivative_of_cosine
 
 
 class ML_NeuralNetwork:
 
-    def __init__(self, x_input_train, hidden_neurons, hidden_layer_act_func, lamda, number_of_iteration, t, eta, tolerance ):
+    def __init__(self, x_input_train, hidden_neurons, hidden_layer_act_func, lamda, number_of_iteration, t, eta,
+                 tolerance):
         self.X_train = np.hstack((np.ones((x_input_train.shape[0], 1)), x_input_train))
         self.hidden_neurons = hidden_neurons
-        self.activation_function , self.derActivationFunc = activation_function(hidden_layer_act_func)
+        self.activation_function, self.derActivationFunc = activation_function(hidden_layer_act_func)
         self.lamda = lamda
         self.number_of_iteration = number_of_iteration
         self.t = t
@@ -127,15 +120,14 @@ class ML_NeuralNetwork:
         # initialize random weights
         # W1 is M x (D+1), M = hidden units
         print(self.tempx)
-        self.weights1 = np.random.rand(self.hidden_neurons,self.tempx) * 0.2 - 0.1
+        self.weights1 = np.random.rand( self.hidden_neurons, self.X_train.shape[1]) * 0.2 - 0.1
         # W2 is K x D +1, M = hidden units, K = k categories
         self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
-
 
     def feedForward(self, x, t, weights1, weights2):
 
         # We calculate first the dot product between weights1 and x and then we pass it as an arg in the chosen act_fun and its gradient func
-        firstLayerResult = self.activation_function(np.dot(x,weights1.T))
+        firstLayerResult = self.activation_function(np.dot(x, weights1.T))
 
         # Add bias
         firstLayerResult = np.hstack((np.ones((firstLayerResult.shape[0], 1)), firstLayerResult))
@@ -144,44 +136,42 @@ class ML_NeuralNetwork:
         y = np.dot(firstLayerResult, weights2.T)
         # softmaxResult is the probability
         softmaxResult = softmax(y)
-        max_error = np.max(softmaxResult, axis=1)
+        max_error = np.max(y, axis=1)
 
         # Loss function
-        Ew =  np.sum(t * y) - np.sum(max_error) - \
-            np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * y.shape[1]).T), 1))) - \
-            (0.5 * lamda) * np.sum(np.square(weights2))
+        Ew = np.sum(t * y) - np.sum(max_error) - \
+             np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * self.number_of_outputs).T), 1))) - \
+             (0.5 * self.lamda) * np.sum(weights2 * weights2)
 
-
-
-        gradw2 = np.dot((t-y).T , firstLayerResult) -eta* weights2
+        gradw2 = np.dot((t - softmaxResult).T, firstLayerResult) - self.lamda * weights2
 
         # Gradient ascent calculation for W1 (we get rid of the bias from w2)
-        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.derActivationFunc(x.dot(weights1.T)).T).dot(x)
+        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.derActivationFunc(x.dot(self.weights1.T)).T).dot(
+            x)
 
-        return Ew, gradw2, gradw1
+        return Ew, gradw1, gradw2
 
     def neural_network_train(self):
         Ew_old = -np.inf
         for i in range(self.number_of_iteration):
-            error, gradWeight1, gradWeight2 = self.feedForward(self.X_train,self.t,self.weights1,self.weights2)
+            error, gradWeight1, gradWeight2 = self.feedForward(self.X_train, self.t, self.weights1, self.weights2)
             print("iteration #", i, "and error=", error)
 
-            if np.absolute(error- Ew_old) < self.tolerance:
-                    break
+            if np.absolute(error - Ew_old) < self.tolerance:
+                break
             # grapse ton tipo
             self.weights1 += self.eta * gradWeight1
 
             self.weights2 += self.eta * gradWeight2
             Ew_old = error
 
-
-    def neural_network_test(self,test_data,test_truth_data):
+    def neural_network_test(self, test_data, test_truth_data):
         # First we add in the test data the bias
-        self.test_data = np.hstack((np.ones((test_data.shape[0], 1)), test_data))
+        test_data_with_bias = np.hstack((np.ones((test_data.shape[0], 1)), test_data))
 
-        #Feed forward
+        # Feed forward
 
-        resultsOfActF = self.activation_function(np.dot(test_data,self.weights1.T))
+        resultsOfActF = self.activation_function(np.dot(test_data_with_bias, self.weights1.T))
 
         # We now the bias
         resultsOfActF = np.hstack((np.ones((resultsOfActF.shape[0], 1)), resultsOfActF))
@@ -196,10 +186,9 @@ class ML_NeuralNetwork:
 
         for i in range(len(test_truth_data)):
             if np.argmax(test_truth_data[i]) != decision[i]:
-                error +=1
+                error += 1
 
-        print("The Error is", error/test_truth_data.shape[0] * 100, "%")
-
+        print("The Error is", error / test_truth_data.shape[0] * 100, "%")
 
     def grad_check(self):
         epsilon = 1e-6
@@ -207,19 +196,19 @@ class ML_NeuralNetwork:
         x_sample = np.array(self.X_train[_list, :])
         t_sample = np.array(self.t[_list, :])
 
-        Ew, gradWeight2, gradWeight1 = self.feedForward(x_sample,t_sample,self.weights1,self.weights2)
+        Ew, gradWeight1, gradWeight2 = self.feedForward(x_sample, t_sample, self.weights1, self.weights2)
 
         print("gradWeight1 shape: ", gradWeight1.shape)
         print("gradWeight2 shape: ", gradWeight2.shape)
         numericalGrad1 = np.zeros(gradWeight1.shape)
         numericalGrad2 = np.zeros(gradWeight2.shape)
 
-        #W1 gradcheck
-        for k in range(0,numericalGrad1.shape[0]):
-            for d in range(0,numericalGrad1.shape[1]):
+        # W1 gradcheck
+        for k in range(0, numericalGrad1.shape[0]):
+            for d in range(0, numericalGrad1.shape[1]):
                 w_temp = np.copy(self.weights1)
-                w_temp[k,d] += epsilon
-                e_plus, _, _ = self.feedForward(x_sample,t_sample,w_temp,self.weights2)
+                w_temp[k, d] += epsilon
+                e_plus, _, _ = self.feedForward(x_sample, t_sample, w_temp, self.weights2)
 
                 w_tmp = np.copy(self.weights1)
                 w_tmp[k, d] -= epsilon
@@ -229,94 +218,54 @@ class ML_NeuralNetwork:
         # Absolute norm
 
         print("The difference estimate for gradient of w1 is : ",
-                np.amax(np.abs(gradWeight1 - numericalGrad1)))
+              np.amax(np.abs(gradWeight1 - numericalGrad1)))
 
         # W2 gradcheck
         for k in range(0, numericalGrad2.shape[0]):
             for d in range(0, numericalGrad2.shape[1]):
                 w_temp = np.copy(self.weights2)
                 w_temp[k, d] += epsilon
-                e_plus, _, _ = self.feedForward(x_sample, t_sample, w_temp, self.weights1)
+                e_plus, _, _ = self.feedForward(x_sample, t_sample, self.weights1, w_temp)
 
-                w_tmp = np.copy(self.weights1)
+                w_tmp = np.copy(self.weights2)
                 w_tmp[k, d] -= epsilon
                 # isos thelei na pername prota to weights kai meta to tmp gia tin w2
-                e_minus, _, _ = self.feedForward(x_sample, t_sample, w_tmp, self.weights1)
+                e_minus, _, _ = self.feedForward(x_sample, t_sample, self.weights1, w_temp)
                 numericalGrad1[k, d] = (e_plus - e_minus) / (2 * epsilon)
 
         # Absolute norm
 
         print("The difference estimate for gradient of w2 is : ",
-                np.amax(np.abs(gradWeight2 - numericalGrad2)))
-
+              np.amax(np.abs(gradWeight2 - numericalGrad2)))
 
 
 if __name__ == '__main__':
-   print("Neural Network multi classification, for Mnist dataset")
+    print("Neural Network multi classification, for Mnist dataset")
 
-   act_func = int(input("Please choose an activation function( insert a number between 1-3): 1 for logarithmic, 2 for tanh and 3 for cosine "))
-   hidden_units = int(input("Please choose the number of hidden neurons:"))
+    act_func = int(input(
+        "Please choose an activation function( insert a number between 1-3): 1 for logarithmic, 2 for tanh and 3 for cosine "))
+    hidden_units = int(input("Please choose the number of hidden neurons:"))
 
-   act_func=int(act_func)
-   hidden_units = int(hidden_units)
-   x_data, test_data, train_truth_data, test_truth_data = load_data()
-   lamda = 0.1
-   eta = 0.5 / x_data.shape[0]
-   # Maximum number of iteration of gradient ascend
-   number_of_iterations = 500
-   tolerance = 1e-6
-   mlnn = ML_NeuralNetwork(x_data, hidden_units, act_func, lamda, number_of_iterations, train_truth_data, eta, tolerance)
+    act_func = int(act_func)
+    hidden_units = int(hidden_units)
+    x_data, test_data, train_truth_data, test_truth_data = load_data()
+    lamda = 0.1
+    eta = 0.5 / x_data.shape[0]
+    # Maximum number of iteration of gradient ascend
+    number_of_iterations = 500
+    tolerance = 1e-6
+    mlnn = ML_NeuralNetwork(x_data, hidden_units, act_func, lamda, number_of_iterations, train_truth_data, eta,
+                            tolerance)
 
-   mlnn.grad_check()
-   mlnn.train()
-   mlnn.test(test_data,test_truth_data)
+    mlnn.grad_check()
+    mlnn.neural_network_train()
+    mlnn.neural_network_test(test_data, test_truth_data)
 
+    # Documentation
 
-
-
-
-        # Documentation
-
-       # np.ones Return a new array of given shape and type, filled with ones.
-       #x_input_train.shape[0] its the rows ---> n  https://stackoverflow.com/questions/10200268/what-does-shape-do-in-for-i-in-rangey-shape0
-       # X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
-       #input layer(  # features), the size of the hidden layer (variable parameter to be tuned), and the number of the output layer (# of possible classes)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # np.ones Return a new array of given shape and type, filled with ones.
+    # x_input_train.shape[0] its the rows ---> n  https://stackoverflow.com/questions/10200268/what-does-shape-do-in-for-i-in-rangey-shape0
+    # X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
+    # input layer(  # features), the size of the hidden layer (variable parameter to be tuned), and the number of the output layer (# of possible classes)
 
 
