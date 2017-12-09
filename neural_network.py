@@ -106,20 +106,18 @@ class ML_NeuralNetwork:
 
     def __init__(self, x_input_train, hidden_neurons, hidden_layer_act_func, lamda, number_of_iteration, t, eta,
                  tolerance):
-        self.X_train = np.hstack((np.ones((x_input_train.shape[0], 1)), x_input_train))
+        self.X_train = np.concatenate((np.ones((x_input_train.shape[0], 1)), x_input_train), axis=1)
         self.hidden_neurons = hidden_neurons
         self.activation_function, self.derActivationFunc = activation_function(hidden_layer_act_func)
         self.lamda = lamda
         self.number_of_iteration = number_of_iteration
         self.t = t
         self.eta = eta
-        self.tempx = x_input_train.shape[1]
         self.tolerance = tolerance
         # T is Nb x K, T = outputs -> # of possible classes
         self.number_of_outputs = t.shape[1]
         # initialize random weights
         # W1 is M x (D+1), M = hidden units
-        print(self.tempx)
         self.weights1 = np.random.rand( self.hidden_neurons, self.X_train.shape[1]) * 0.2 - 0.1
         # W2 is K x D +1, M = hidden units, K = k categories
         self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
@@ -130,12 +128,11 @@ class ML_NeuralNetwork:
         firstLayerResult = self.activation_function(np.dot(x, weights1.T))
 
         # Add bias
-        firstLayerResult = np.hstack((np.ones((firstLayerResult.shape[0], 1)), firstLayerResult))
+        firstLayerResult_with_bias = np.concatenate((np.ones((firstLayerResult.shape[0], 1)), firstLayerResult), axis=1)
 
         # Y is the output
-        y = np.dot(firstLayerResult, weights2.T)
-        # softmaxResult is the probability
-        softmaxResult = softmax(y)
+        y = np.dot(firstLayerResult_with_bias, weights2.T)
+
         max_error = np.max(y, axis=1)
 
         # Loss function
@@ -143,10 +140,13 @@ class ML_NeuralNetwork:
              np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * self.number_of_outputs).T), 1))) - \
              (0.5 * self.lamda) * np.sum(weights2 * weights2)
 
-        gradw2 = np.dot((t - softmaxResult).T, firstLayerResult) - self.lamda * weights2
+        # softmaxResult is the probability
+        softmaxResult = softmax(y)
+
+        gradw2 = np.dot((t - softmaxResult).T, firstLayerResult_with_bias) - self.lamda * weights2
 
         # Gradient ascent calculation for W1 (we get rid of the bias from w2)
-        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.derActivationFunc(x.dot(self.weights1.T)).T).dot(
+        gradw1 = (weights2[:, 1:].T.dot((t - softmaxResult).T) * self.derActivationFunc(x.dot(weights1.T)).T).dot(
             x)
 
         return Ew, gradw1, gradw2
@@ -167,20 +167,20 @@ class ML_NeuralNetwork:
 
     def neural_network_test(self, test_data, test_truth_data):
         # First we add in the test data the bias
-        test_data_with_bias = np.hstack((np.ones((test_data.shape[0], 1)), test_data))
+        test_data_with_bias = np.concatenate((np.ones((test_data.shape[0], 1)), test_data), axis=1)
 
         # Feed forward
 
         resultsOfActF = self.activation_function(np.dot(test_data_with_bias, self.weights1.T))
 
         # We now the bias
-        resultsOfActF = np.hstack((np.ones((resultsOfActF.shape[0], 1)), resultsOfActF))
+        resultsOfActF_with_bias = np.concatenate((np.ones((resultsOfActF.shape[0], 1)), resultsOfActF), axis=1)
 
-        y = np.dot(resultsOfActF, self.weights2.T)
+        y = np.dot(resultsOfActF_with_bias, self.weights2.T)
 
         probabilitiesResult = softmax(y)
 
-        decision = np.max(probabilitiesResult, axis=1)
+        decision = np.argmax(probabilitiesResult, axis=1)
 
         error = 0
 
@@ -229,7 +229,7 @@ class ML_NeuralNetwork:
 
                 w_tmp = np.copy(self.weights2)
                 w_tmp[k, d] -= epsilon
-                # isos thelei na pername prota to weights kai meta to tmp gia tin w2
+
                 e_minus, _, _ = self.feedForward(x_sample, t_sample, self.weights1, w_temp)
                 numericalGrad1[k, d] = (e_plus - e_minus) / (2 * epsilon)
 
@@ -252,7 +252,7 @@ if __name__ == '__main__':
     lamda = 0.1
     eta = 0.5 / x_data.shape[0]
     # Maximum number of iteration of gradient ascend
-    number_of_iterations = 500
+    number_of_iterations = 800
     tolerance = 1e-6
     mlnn = ML_NeuralNetwork(x_data, hidden_units, act_func, lamda, number_of_iterations, train_truth_data, eta,
                             tolerance)
