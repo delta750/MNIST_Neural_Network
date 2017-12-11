@@ -1,5 +1,7 @@
 from __future__ import division
 
+from random import shuffle
+
 import numpy as np
 
 
@@ -59,6 +61,7 @@ def load_data():
 X_train, X_test, y_train, y_test = load_data()
 
 
+
 def activation_function(act_fun):
     def sigmoid(z):
         return 1 / (1 + np.exp(-z))
@@ -105,12 +108,13 @@ def activation_function(act_fun):
 class ML_NeuralNetwork:
 
     def __init__(self, x_input_train, hidden_neurons, hidden_layer_act_func, lamda, number_of_iteration, t, eta,
-                 tolerance):
+                 tolerance, minibatches, shuffle=True):
         self.X_train = np.concatenate((np.ones((x_input_train.shape[0], 1)), x_input_train), axis=1)
         self.hidden_neurons = hidden_neurons
         self.activation_function, self.derActivationFunc = activation_function(hidden_layer_act_func)
         self.lamda = lamda
         self.number_of_iteration = number_of_iteration
+        # t is the y_train data or train_truth_data
         self.t = t
         self.eta = eta
         self.tolerance = tolerance
@@ -121,6 +125,8 @@ class ML_NeuralNetwork:
         self.weights1 = np.random.rand( self.hidden_neurons, self.X_train.shape[1]) * 0.2 - 0.1
         # W2 is K x D +1, M = hidden units, K = k categories
         self.weights2 = np.random.rand(self.number_of_outputs, self.hidden_neurons + 1)
+        self.shuffle = shuffle
+        self.minibatches = minibatches
 
     def feedForward(self, x, t, weights1, weights2):
 
@@ -137,11 +143,12 @@ class ML_NeuralNetwork:
 
         # Loss function
         Ew = np.sum(t * y) - np.sum(max_error) - \
-             np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * self.number_of_outputs).T), 1))) - \
+             np.sum(np.log(np.sum(np.exp(y - np.array([max_error, ] * y.shape[1]).T), 1))) - \
              (0.5 * self.lamda) * np.sum(weights2 * weights2)
 
         # softmaxResult is the probability
         softmaxResult = softmax(y)
+        #print(softmaxResult,"softmaxRESULT")
 
         gradw2 = np.dot((t - softmaxResult).T, firstLayerResult_with_bias) - self.lamda * weights2
 
@@ -153,17 +160,40 @@ class ML_NeuralNetwork:
 
     def neural_network_train(self):
         Ew_old = -np.inf
+
+
+        if self.shuffle:
+
+
+            X_count = self.X_train.shape[0]
+
+            batchCount = int(X_count / minibatches)
+
+
+            shuffledRange = range(X_count)
+            shuffledX = self.X_train[shuffledRange,]
+            shuffledY = [self.t[i] for i in shuffledRange]
+
+
+
         for i in range(self.number_of_iteration):
-            error, gradWeight1, gradWeight2 = self.feedForward(self.X_train, self.t, self.weights1, self.weights2)
-            print("iteration #", i, "and error=", error)
 
-            if np.absolute(error - Ew_old) < self.tolerance:
-                break
-            # grapse ton tipo
-            self.weights1 += self.eta * gradWeight1
 
-            self.weights2 += self.eta * gradWeight2
-            Ew_old = error
+            for i in range(0, batchCount):  # Iterate over "mini-batches" of 1000 samples each
+
+                y_train_batch = shuffledY[i * minibatches:(i + 1) * minibatches]
+                X_train_batch = shuffledX[i * minibatches:(i + 1) * minibatches, ]
+
+                error, gradWeight1, gradWeight2 = self.feedForward(X_train_batch, y_train_batch, self.weights1, self.weights2)
+                print("iteration #", i, "and error=", error)
+
+                if np.absolute(error - Ew_old) < self.tolerance:
+                    break
+
+                self.weights1 += self.eta * gradWeight1
+
+                self.weights2 += self.eta * gradWeight2
+                Ew_old = error
 
     def neural_network_test(self, test_data, test_truth_data):
         # First we add in the test data the bias
@@ -254,18 +284,13 @@ if __name__ == '__main__':
     # Maximum number of iteration of gradient ascend
     number_of_iterations = 800
     tolerance = 1e-6
+    minibatches = 200
     mlnn = ML_NeuralNetwork(x_data, hidden_units, act_func, lamda, number_of_iterations, train_truth_data, eta,
-                            tolerance)
+                            tolerance,minibatches, shuffle=True)
 
-    mlnn.grad_check()
+    #mlnn.grad_check()
     mlnn.neural_network_train()
     mlnn.neural_network_test(test_data, test_truth_data)
 
-    # Documentation
-
-    # np.ones Return a new array of given shape and type, filled with ones.
-    # x_input_train.shape[0] its the rows ---> n  https://stackoverflow.com/questions/10200268/what-does-shape-do-in-for-i-in-rangey-shape0
-    # X_test = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
-    # input layer(  # features), the size of the hidden layer (variable parameter to be tuned), and the number of the output layer (# of possible classes)
 
 
